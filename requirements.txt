@@ -1,0 +1,14 @@
+numpy
+PyQt5
+PyQt5-stubs
+scipy==1.6.0
+hidapi
+inputs
+shapely
+matplotlib
+descartes
+pyqtgraph
+tqdm
+pandas
+seaborn
+opencv-python-headless
