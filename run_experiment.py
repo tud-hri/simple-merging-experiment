@@ -147,6 +147,8 @@ if __name__ == '__main__':
 
     lsw.initialize_with_window(True, int(gui.winId()))
 
+    # The two lines below construct objects that communicate with steering wheel. These are commented out to enable running the code without hardware.
+
     # steering_wheel_right = SteeringWheelAgent(0, use_vibration_feedback=True, desired_velocity=initial_conditions.right_initial_velocity,
     #                                           controllable_object=right_point_mass_object)
     #
@@ -155,6 +157,9 @@ if __name__ == '__main__':
 
     gui.register_controllable_cars(left_point_mass_object, right_point_mass_object, simulation_constants.vehicle_length,
                                    simulation_constants.vehicle_width)
+
+    # The lines below add vehicles to the simulation. The last argument determines the source of the control input for a vehicle. The steeringwheel controls are
+    # commented out here. Instead, ZeroAgent objects are used. These are fake inputs that always use an input of 0.
 
     # sim_master.add_vehicle(TrackSide.LEFT, left_point_mass_object, steering_wheel_left)
     # sim_master.add_vehicle(TrackSide.RIGHT, right_point_mass_object, steering_wheel_right)
