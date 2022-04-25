@@ -6,9 +6,9 @@
 *.txt
 !README.md
 !README.txt
-!/data/README.txt
-!/data/surroundings.pkl
-!/data/headway_bounds.pkl
+!data/README.txt
+!data/surroundings.pkl
+!data/headway_bounds.pkl
 !requirements.txt
 *.db
 *.tif
