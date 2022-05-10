@@ -12,3 +12,4 @@ tqdm
 pandas
 seaborn
 opencv-python-headless
+logitech-steering-wheel
