@@ -98,7 +98,8 @@ def calculate_conflict_at_tunnel_exit(condition: ConditionDefinition, simulation
 
 
 def calculate_level_of_conflict_signal(average_travelled_distance_trace, head_way_trace, critical_points):
-    gradients = np.gradient(head_way_trace, average_travelled_distance_trace)
+    one_sided_gradient = ((head_way_trace - np.roll(head_way_trace, 1)) / (average_travelled_distance_trace - np.roll(average_travelled_distance_trace, 1)))
+    one_sided_gradient[0] = 0.  # first gradient is 0. per definition if only history is taken into account
     data_points = np.stack([average_travelled_distance_trace, head_way_trace]).T
 
     """the Maximum angle is based on the concept that one of the two vehicles remains stationary. The headway can then increase or decrease precisely twice as 
@@ -108,7 +109,7 @@ def calculate_level_of_conflict_signal(average_travelled_distance_trace, head_wa
     level_of_conflict = {TrackSide.LEFT: np.zeros(head_way_trace.shape),
                          TrackSide.RIGHT: np.zeros(head_way_trace.shape)}
 
-    for index, (point, gradient) in enumerate(zip(data_points, gradients)):
+    for index, (point, gradient) in enumerate(zip(data_points, one_sided_gradient)):
         for side in TrackSide:
             difficulties = []
             for critical_point in critical_points[side]:
