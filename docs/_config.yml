@@ -18,18 +18,17 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Your awesome title
-email: your-email@example.com
-description: >- # this means to ignore newlines until "baseurl:"
-  Write an awesome description for your new site here. You can edit this
-  line in _config.yml. It will appear in your document head meta (for
-  Google search results) and in your feed.xml site description.
+title: |
+  Human Merging Behaviour in a Coupled Driving Simulator: 
+  How do we resolve conflicts?
+description: >- 
+  The online supplementary materials accompanying the paper  
+  Human Merging Behaviour in a Coupled Driving Simulator: How do we resolve conflicts/home/olger/gems/gems/minima-2.5.1/assets/main.scss?
 domain: tud-hri.github.io       # if you want to force HTTPS, specify the domain without the http at the start, e.g. example.com
 url: https://tud-hri.github.io  # the base hostname and protocol for your site, e.g. http://example.com
 baseurl: /simple-merging-experiment/docs/      # place folder name if the site is served in a subfolder
 
-twitter_username: jekyllrb
-github_username:  jekyll
+github_username:  tud-hri
 
 # Build settings
 theme: minima

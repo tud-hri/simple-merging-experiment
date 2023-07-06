@@ -247,7 +247,7 @@ def generate_initial_action_scatter(global_metric_data, individual_metric_data):
     fig.update_xaxes(range=[-3.5, 2.])
     fig.update_yaxes(range=[-3.5, 2.])
 
-    fig.write_html('html_output\\intial_action.html')
+    fig.write_html('html_output\\initial_action.html')
 
 
 def generate_3d_boxplot(data_excluding_collisions):
