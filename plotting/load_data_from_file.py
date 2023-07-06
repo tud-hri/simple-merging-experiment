@@ -16,6 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with simple-merging-experiment.  If not, see <https://www.gnu.org/licenses/>.
 """
+import copy
 import os
 import pickle
 
@@ -185,27 +186,30 @@ def check_if_on_collision_course_for_point(travelled_distance_collision_point, d
 
 def calculate_conflict_resolved_time(data):
     if data['end_state'] == 'Collided':
-        return None
+        return None, None
 
     time = [t * data['dt'] / 1000 for t in range(len(data['velocities'][TrackSide.LEFT]))]
     track = data['track']
 
     merge_point_collision_course = check_if_on_collision_course_for_point(2 * data['simulation_constants'].track_section_length, data)
-    threshold_collision_course = check_if_on_collision_course_for_point(track._upper_bound_threshold + 1e-3, data)
-    end_point_collision_course = check_if_on_collision_course_for_point(3 * data['simulation_constants'].track_section_length, data)
+    try:
+        threshold_collision_course = check_if_on_collision_course_for_point(track._upper_bound_threshold + 1e-3, data)
+    except AttributeError: # a straight track has no threshold
+        threshold_collision_course = merge_point_collision_course
+    end_point_collision_course = check_if_on_collision_course_for_point(data['track'].total_distance, data)
 
     on_collision_course = merge_point_collision_course | threshold_collision_course | end_point_collision_course
 
     approach_mask = ((np.array(data['travelled_distance'][TrackSide.RIGHT]) > data['simulation_constants'].track_section_length) &
-                     (np.array(data['travelled_distance'][TrackSide.RIGHT]) < 2 * data['simulation_constants'].track_section_length)) | \
-                    ((np.array(data['travelled_distance'][TrackSide.LEFT]) > data['simulation_constants'].track_section_length) &
-                     (np.array(data['travelled_distance'][TrackSide.LEFT]) < 2 * data['simulation_constants'].track_section_length))
+                     (np.array(data['travelled_distance'][TrackSide.LEFT]) > data['simulation_constants'].track_section_length))
 
     indices_of_conflict_resolved = ((on_collision_course == False) & approach_mask)
 
     try:
-        time_of_conflict_resolved = np.array(time)[indices_of_conflict_resolved][0]
+        conflict_resolved_index = np.where(indices_of_conflict_resolved)[0][0]
+        time_of_conflict_resolved = np.array(time)[conflict_resolved_index]
     except IndexError:
+        conflict_resolved_index = None
         time_of_conflict_resolved = None
 
     return time_of_conflict_resolved
@@ -238,6 +242,7 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
                            'conflict_resolved_time': [],
                            'nett crt': [],
                            'out_of_tunnel_time': [],
+                           'merge_time': [],
                            'condition': [],
                            'end state': [],
                            'std of difficulty': [],
@@ -258,6 +263,7 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
                                'moment of first response': [],
                                'number of replans': [],
                                'max deviation from desired v': [],
+                               'initial nett acceleration': [],
                                'condition': [],
                                'end state': [],
                                'trial_number': [],
@@ -332,6 +338,9 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
                               (np.array(data['travelled_distance'][TrackSide.RIGHT]) > data['simulation_constants'].track_section_length)
     both_before_merge_mask = (np.array(data['travelled_distance'][TrackSide.LEFT]) < 2 * data['simulation_constants'].track_section_length) & \
                              (np.array(data['travelled_distance'][TrackSide.RIGHT]) < 2 * data['simulation_constants'].track_section_length)
+    participants_have_control_mask = copy.copy(both_out_of_tunnel_mask)
+    participants_have_control_mask[np.where(participants_have_control_mask)[0][0]] = False
+
     out_of_tunnel_time = np.array(time)[both_out_of_tunnel_mask][0]
     global_metrics_dict['out_of_tunnel_time'].append(out_of_tunnel_time)
 
@@ -398,6 +407,12 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
     global_traces_dict['difficulty right'] += list(level_of_conflict[TrackSide.RIGHT])
     global_traces_dict['difficulty left'] += list(level_of_conflict[TrackSide.LEFT])
 
+    try:
+        merge_point_index = np.where(average_travelled_distance >= 2 * data['simulation_constants'].track_section_length)[0][0]
+        global_metrics_dict['merge_time'].append(time[merge_point_index])
+    except IndexError:
+        global_metrics_dict['merge_time'].append(None)
+
     if get_first(data):
         global_metrics_dict['std of difficulty'] += [np.std(np.array(level_of_conflict[get_first(data)])[both_before_merge_mask & both_out_of_tunnel_mask])]
     else:
@@ -422,6 +437,7 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
         individual_metrics_dict['max deviation from desired v'] += [
             np.abs(np.array(data['velocities'][side]) - data['current_condition'].get_initial_velocity(side)).max()]
         individual_metrics_dict['condition'] += [condition_name]
+        individual_metrics_dict['initial nett acceleration'] += [np.array(data['net_accelerations'][side])[participants_have_control_mask][0]]
         individual_metrics_dict['trial_number'] += [experiment_iteration]
         individual_metrics_dict['experiment_number'] += [experiment_iteration.split('-')[0]]
         individual_metrics_dict['end state'].append(end_state)

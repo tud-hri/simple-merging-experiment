@@ -23,7 +23,8 @@ import pickle
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.colors import SymLogNorm
+from matplotlib.legend import Legend
+import matplotlib.lines
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -35,15 +36,22 @@ from tools import ProgressProcess
 from trackobjects.trackside import TrackSide
 
 
-def load_data(all_files, included_conditions, invert_scenarios=False, override_trial_numbers=False):
+def load_data(all_files, included_conditions, override_trial_numbers=False, show_tqdm=True):
     global_metrics_df_list = []
     global_traces_df_list = []
     individual_metrics_df_list = []
     individual_traces_df_list = []
 
-    for index, file in tqdm.tqdm(enumerate(all_files), total=len(all_files)):
-        global_metrics, individual_metrics, global_traces, individual_traces = load_data_from_file(index, file, override_trial_numbers, invert_scenarios,
-                                                                                                   included_conditions)
+    if show_tqdm:
+        iterator = tqdm.tqdm(enumerate(all_files), total=len(all_files))
+    else:
+        iterator = enumerate(all_files)
+
+    for index, file in iterator:
+        global_metrics, individual_metrics, global_traces, individual_traces = load_data_from_file(index, file,
+                                                                                                                     override_trial_numbers,
+                                                                                                                     invert_scenarios=False,
+                                                                                                                     included_conditions=included_conditions)
 
         global_metrics_df_list.append(global_metrics)
         global_traces_df_list.append(global_traces)
@@ -56,6 +64,50 @@ def load_data(all_files, included_conditions, invert_scenarios=False, override_t
     individual_traces = pd.concat(individual_traces_df_list, ignore_index=True).convert_dtypes()
 
     return global_metrics, individual_metrics, global_traces, individual_traces
+
+
+def load_experiment_data(conditions_to_consider):
+    data_folder = '..\\data\\experiment_data\\'
+
+    try:
+        with open(data_folder + 'all_traces.pkl', 'rb') as f:
+            all_global_traces = pickle.load(f)
+        with open(data_folder + 'all_metrics.pkl', 'rb') as f:
+            all_global_metrics = pickle.load(f)
+        with open(data_folder + 'all_individual_traces.pkl', 'rb') as f:
+            all_individual_traces = pickle.load(f)
+        with open(data_folder + 'all_individual_metrics.pkl', 'rb') as f:
+            all_individual_metrics = pickle.load(f)
+    except FileNotFoundError:
+        all_global_metrics = []
+        all_global_traces = []
+        all_individual_traces = []
+        all_individual_metrics = []
+
+        for experiment_number in [4, 5, 6, 8, 9, 10, 11, 12, 13]:
+            all_experiment_iterations = glob.glob('..\\data\\experiment_data\\experiment_%d\\experiment_%d_iter_*.pkl' % (experiment_number, experiment_number))
+
+            global_metrics, individual_metrics, global_traces, individual_traces = load_data(all_experiment_iterations, conditions_to_consider)
+            all_global_metrics.append(global_metrics)
+            all_global_traces.append(global_traces)
+            all_individual_traces.append(individual_traces)
+            all_individual_metrics.append(individual_metrics)
+
+        all_global_traces = pd.concat(all_global_traces).reset_index()
+        all_global_metrics = pd.concat(all_global_metrics).reset_index()
+        all_individual_traces = pd.concat(all_individual_traces).reset_index()
+        all_individual_metrics = pd.concat(all_individual_metrics).reset_index()
+
+        with open(data_folder + 'all_traces.pkl', 'wb') as f:
+            pickle.dump(all_global_traces, f)
+        with open(data_folder + 'all_metrics.pkl', 'wb') as f:
+            pickle.dump(all_global_metrics, f)
+        with open(data_folder + 'all_individual_traces.pkl', 'wb') as f:
+            pickle.dump(all_individual_traces, f)
+        with open(data_folder + 'all_individual_metrics.pkl', 'wb') as f:
+            pickle.dump(all_individual_metrics, f)
+
+    return all_global_traces, all_global_metrics, all_individual_traces, all_individual_metrics
 
 
 def load_data_with_multi_processing(all_files, included_conditions, invert_scenarios=False, override_trial_numbers=False, workers=8):
@@ -271,6 +323,139 @@ def collision_bounds_in_axis(ax):
             linestyle='dashed', c='lightgrey')
 
 
+def plot_spaghetti_paper(individual_traces_data, global_metrics, experiment_number_bold):
+    fig, axes = plt.subplots(2, 1, figsize=(11, 9))
+    for index, side in enumerate(TrackSide):
+        side = str(side)
+        data_mask = (individual_traces_data['side'] == side) & \
+                    (individual_traces_data['condition'] == 'N_0_0') & \
+                    (individual_traces_data['time [s]'] > 4.5) & \
+                    (individual_traces_data['travelled distance [m]'] < 2 * 50 - 2)
+        sizes = {}
+        for experiment_number in individual_traces_data['experiment_number'].unique():
+            sizes[experiment_number] = 3. if experiment_number == experiment_number_bold else 0.5
+
+        individual_traces_data['trial_number'] = individual_traces_data['trial_number'].astype(str)
+
+        sns.lineplot(data=individual_traces_data.loc[data_mask], x='time [s]', y='velocity [m/s]', units='trial_number', hue='experiment_number',
+                     estimator=None, ax=axes[index], color='k', size='experiment_number', sizes=sizes, legend='full')
+
+        axes[index].title.set_text(side.capitalize() + ' Driver')
+        # axes[index].set_ylim(y_limits)
+        # axes[index].set_ylim(y_limits)
+
+        all_trials = individual_traces_data.loc[data_mask, 'trial_number'].unique()
+
+        def _get_final_point(row):
+            trace = individual_traces_data.loc[data_mask & (individual_traces_data['trial_number'] == row['trial_number']), :]
+            row['velocity [m/s]'] = trace['velocity [m/s]'].iat[-1]
+            row['time [s]'] = trace['time [s]'].iat[-1]
+
+            return row
+
+        outcomes = global_metrics.loc[global_metrics['condition'] == 'N_0_0', ['trial_number', 'who went first']]
+        outcomes = outcomes.apply(_get_final_point, axis=1)
+
+        palette = {TrackSide.LEFT: 'tab:blue',
+                   TrackSide.RIGHT: 'tab:orange',
+                   'Collision': 'tab:red'}
+        marker_dict = {TrackSide.LEFT: '<',
+                       TrackSide.RIGHT: '>',
+                       'Collision': 'd'}
+        sns.scatterplot(data=outcomes, x='time [s]', y='velocity [m/s]', hue='who went first', marker='o', s=20., palette=palette, ax=axes[index], legend=False,
+                        zorder=10, style='who went first', markers=marker_dict)
+
+        legend = axes[index].get_legend()
+        lines = legend.get_lines()
+        new_labels = ['Pair 1', 'Pair 2', 'Pair 3', 'Pair 4', 'Pair 5', 'Pair 6', 'Pair 7', 'Pair 8', 'Pair 9']
+        axes[index].legend(lines, new_labels, title='Participant Pair', loc=3)
+
+        handles = []
+        labels = []
+        for key, value in palette.items():
+            handles.append(matplotlib.lines.Line2D([0], [0], marker='o', c=value, lw=0))
+            label = str(key).capitalize() + (' first' if key != 'Collision' else '')
+            labels.append(label)
+
+        second_legend = Legend(axes[index], handles, labels, title='Trial Outcome', loc=1)
+        axes[index].add_artist(second_legend)
+        fig.tight_layout()
+
+
+def plot_initial_response_vs_who_first(global_metric_data, individual_metric_data):
+    condition_iterator = [global_metric_data['condition'].unique()]
+
+    variable = 'initial nett acceleration'
+    limits = (individual_metric_data[variable].min() * 0.9, individual_metric_data[variable].max() * 1.1)
+
+    for condition_list in condition_iterator:
+        fig, axes = plt.subplots(1, 4, figsize=(16, 4.5))
+        for ax in axes.flatten():
+            ax.set_aspect(1)
+            ax.plot(limits, limits, linestyle='dashed', color='grey')
+            ax.hlines(0.0, *limits, linestyles='dashed', colors='lightgrey')
+            ax.vlines(0.0, *limits, linestyles='dashed', colors='lightgrey')
+            ax.set_xlim(limits)
+            ax.set_ylim(limits)
+
+        global_metric_plot_data = global_metric_data.loc[global_metric_data['condition'].isin(condition_list), :]
+        individual_metric_plot_data = individual_metric_data.loc[individual_metric_data['condition'].isin(condition_list), :]
+
+        left_initial_input = individual_metric_plot_data.loc[individual_metric_plot_data['side'] == 'left', ['trial_number', variable]]
+        left_initial_input.rename(columns={variable: 'left ' + variable}, inplace=True)
+        right_initial_input = individual_metric_plot_data.loc[individual_metric_plot_data['side'] == 'right', ['trial_number', variable]]
+        right_initial_input.rename(columns={variable: 'right ' + variable}, inplace=True)
+
+        plot_data = pd.merge(global_metric_plot_data.loc[:, ['who went first', 'trial_number']], left_initial_input, on='trial_number')
+        plot_data = pd.merge(plot_data, right_initial_input, on='trial_number')
+
+        who_went_first_palette = {TrackSide.LEFT: 'tab:blue',
+                                  TrackSide.RIGHT: 'tab:orange',
+                                  'Collision': 'tab:red'}
+        marker_dict = {TrackSide.LEFT: '<',
+                       TrackSide.RIGHT: '>',
+                       'Collision': 'd'}
+
+        who_went_first_legend_dict = {}
+        sns.scatterplot(data=plot_data, x='left ' + variable, y='right ' + variable, hue='who went first', s=40, alpha=0.6,
+                        ax=axes[0], palette=who_went_first_palette, style='who went first', markers=marker_dict, linewidth=0.1)
+        sns.kdeplot(x=plot_data.loc[plot_data['who went first'] == TrackSide.LEFT, 'left ' + variable].to_numpy(),
+                    y=plot_data.loc[plot_data['who went first'] == TrackSide.LEFT, 'right ' + variable].to_numpy(),
+                    ax=axes[1], color=who_went_first_palette[TrackSide.LEFT], fill=True)
+        sns.kdeplot(x=plot_data.loc[plot_data['who went first'] == TrackSide.RIGHT, 'left ' + variable].to_numpy(),
+                    y=plot_data.loc[plot_data['who went first'] == TrackSide.RIGHT, 'right ' + variable].to_numpy(),
+                    ax=axes[2], color=who_went_first_palette[TrackSide.RIGHT], fill=True)
+        sns.kdeplot(x=plot_data.loc[plot_data['who went first'] == 'Collision', 'left ' + variable].to_numpy(),
+                    y=plot_data.loc[plot_data['who went first'] == 'Collision', 'right ' + variable].to_numpy(),
+                    ax=axes[3], color=who_went_first_palette['Collision'], fill=True)
+
+        who_went_first_legend_dict = {}
+
+        for label, ax in [(TrackSide.LEFT, axes[1]),
+                          (TrackSide.RIGHT, axes[2]),
+                          ('Collision', axes[3])]:
+            who_went_first_legend_dict[label] = matplotlib.lines.Line2D([0], [0], lw=0, marker=marker_dict[label], c=who_went_first_palette[label])
+
+        axes[0].legend(who_went_first_legend_dict.values(), who_went_first_legend_dict.keys(), title='Who Went First?', loc='center left',
+                       bbox_to_anchor=(0.001, 0.15))
+
+        axis_label = 'initial acceleration [m/s]'
+        axes[0].set_xlabel('Left ' + axis_label)
+        axes[0].set_ylabel('Right ' + axis_label)
+        axes[0].set_title('All data, n=' + str(len(plot_data.loc[:, 'who went first'])))
+        axes[1].set_xlabel('Left ' + axis_label)
+        axes[1].set_ylabel('')
+        axes[1].set_title('Left first, n=' + str(len(plot_data.loc[plot_data['who went first'] == TrackSide.LEFT, 'who went first'])))
+        axes[2].set_xlabel('Left ' + axis_label)
+        axes[2].set_ylabel('')
+        axes[2].set_title('Right first, n=' + str(len(plot_data.loc[plot_data['who went first'] == TrackSide.RIGHT, 'who went first'])))
+        axes[3].set_xlabel('Left ' + axis_label)
+        axes[3].set_ylabel('')
+        axes[3].set_title('Collisions, n=' + str(len(plot_data.loc[plot_data['who went first'] == 'Collision', 'who went first'])))
+
+        plt.tight_layout()
+
+
 if __name__ == '__main__':
 
     conditions_to_consider = ['R_-4_-8', 'R_-4_0', 'R_-4_8', 'R_-2_8', 'R_0_8', 'N_0_0', 'L_0_-8', 'L_2_-8', 'L_4_-8', 'L_4_0', 'L_4_8']
@@ -296,25 +481,14 @@ if __name__ == '__main__':
     all_headway_figures = []
     all_v_rel_figures = []
 
-    all_global_metrics = []
-    all_global_traces = []
+    global_traces, global_metrics, individual_traces, individual_metrics = load_experiment_data(conditions_to_consider)
 
-    for experiment_number in [4, 5, 6, 8, 9, 10, 11, 12, 13]:
-        all_experiment_iterations = glob.glob('..\\data\\experiment_data\\experiment_%d\\experiment_%d_iter_*.pkl' % (experiment_number, experiment_number))
-
-        global_metrics, individual_metrics, global_traces, individual_traces = load_data(all_experiment_iterations, conditions_to_consider)
-        example_file = all_experiment_iterations[0]
-        all_global_metrics.append(global_metrics)
-        all_global_traces.append(global_traces)
-
-    all_traces = pd.concat(all_global_traces).reset_index()
-    all_metrics = pd.concat(all_global_metrics).reset_index()
-
-    plot_global_metrics(all_metrics, color_dict, conditions_to_consider)
+    # plot_global_metrics(global_metrics, color_dict, conditions_to_consider)
 
     # other plotting options below
     # -----------------------------------------
-
+    plot_spaghetti_paper(individual_traces, global_metrics, experiment_number_bold='12')
+    plot_initial_response_vs_who_first(global_metrics, individual_metrics)
     # plot_global_traces(global_traces, color_dict)
     # plot_individual_metrics(individual_metrics, conditions_to_consider)
     # plot_individual_traces(individual_traces, color_dict)

@@ -1,7 +1,7 @@
 numpy
 PyQt5
 PyQt5-stubs
-scipy==1.6.0
+scipy
 hidapi
 inputs
 shapely
@@ -13,3 +13,5 @@ pandas
 seaborn
 opencv-python-headless
 logitech-steering-wheel
+pymer4
+plotly
