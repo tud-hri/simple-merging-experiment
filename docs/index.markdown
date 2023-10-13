@@ -48,3 +48,9 @@ The plots below show all velocity traces for all trials, sorted per condition. L
 
 <h2>CRT over Conditions</h2>
 <iframe src="plots/3d_boxplot.html" style="width:100%;aspect-ratio: 2/1;"></iframe>
+
+<h2>Learning effect during the experiment</h2>
+To check if learning effect were present during the experiment, we investigated if the performance and effort of the drivers changes over the trials. For performance, we used the collisions as a metric, for effort we used the maximum deviation from the initial velocity. Based on the plot below, we concluded that there is no evidence that suggests leaning effects were present after the training phase.
+
+![Collisions over trials](plots/collisions_over_trials.png)
+![Effort over trials](plots/actions_over_trials.png)
