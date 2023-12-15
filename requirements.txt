@@ -15,3 +15,6 @@ opencv-python-headless
 logitech-steering-wheel
 pymer4
 plotly
+statsmodels
+colorednoise
+casadi

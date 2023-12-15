@@ -23,6 +23,7 @@ import pickle
 import numpy as np
 import pandas as pd
 
+from tools.append_experiment_with_belief import append_experiment_data_with_belief
 from plotting.conflict_signal import calculate_level_of_conflict_signal, determine_critical_points
 from trackobjects.trackside import TrackSide
 
@@ -194,7 +195,7 @@ def calculate_conflict_resolved_time(data):
     merge_point_collision_course = check_if_on_collision_course_for_point(2 * data['simulation_constants'].track_section_length, data)
     try:
         threshold_collision_course = check_if_on_collision_course_for_point(track._upper_bound_threshold + 1e-3, data)
-    except AttributeError: # a straight track has no threshold
+    except AttributeError:  # a straight track has no threshold
         threshold_collision_course = merge_point_collision_course
     end_point_collision_course = check_if_on_collision_course_for_point(data['track'].total_distance, data)
 
@@ -212,7 +213,7 @@ def calculate_conflict_resolved_time(data):
         conflict_resolved_index = None
         time_of_conflict_resolved = None
 
-    return time_of_conflict_resolved
+    return time_of_conflict_resolved, conflict_resolved_index
 
 
 def calculate_time_of_first_action(data, threshold=10e-3):
@@ -235,7 +236,7 @@ def calculate_time_of_first_action(data, threshold=10e-3):
     return first_action_times
 
 
-def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenario=False):
+def get_data_as_dicts(data, condition_name, experiment_iteration, is_simulation):
     global_metrics_dict = {'who went first': [],
                            'time_gap_at_merge': [],
                            'min_ttc_after_merge': [],
@@ -248,6 +249,7 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
                            'std of difficulty': [],
                            'headway at merge point': [],
                            'trial_number': [],
+                           'is_simulation': [],
                            'experiment_number': [],
                            'left risk bounds': [],
                            'right risk bounds': [],
@@ -260,13 +262,16 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
                                'positive acceleration integral': [],
                                'negative acceleration integral': [],
                                'max acceleration': [],
+                               'v after one second': [],
+                               'velocity deviation after one second': [],
                                'moment of first response': [],
                                'number of replans': [],
-                               'max deviation from desired v': [],
-                               'initial nett acceleration': [],
+                               'max abs deviation from desired v': [],
+                               'extreme deviation from desired v': [],
                                'condition': [],
                                'end state': [],
                                'trial_number': [],
+                               'is_simulation': [],
                                'experiment_number': [],
                                'side': [],
                                'risk bounds': [],
@@ -282,6 +287,7 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
                           'time [s]': [],
                           'condition': [],
                           'trial_number': [],
+                          'is_simulation': [],
                           'experiment_number': [],
                           'end state': [],
                           'left risk bounds': [],
@@ -289,12 +295,16 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
 
     individual_traces_dict = {'velocity [m/s]': [],
                               'input': [],
+                              'perceived risk': [],
+                              'acceleration [m/s^2]': [],
+                              'jerk [m/s^3]': [],
                               'travelled distance [m]': [],
                               'deviation from constant v [m]': [],
                               'time [s]': [],
                               'side': [],
                               'condition': [],
                               'trial_number': [],
+                              'is_simulation': [],
                               'experiment_number': [],
                               'end state': [],
                               'risk bounds': [],
@@ -306,23 +316,15 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
     global_metrics_dict['condition'].append(condition_name)
 
     if data['risk_bounds']:
-        if not invert_scenario:
-            left_risk_bounds = data['risk_bounds'][TrackSide.LEFT]
-            right_risk_bounds = data['risk_bounds'][TrackSide.RIGHT]
-        else:
-            left_risk_bounds = data['risk_bounds'][TrackSide.RIGHT]
-            right_risk_bounds = data['risk_bounds'][TrackSide.LEFT]
+        left_risk_bounds = data['risk_bounds'][TrackSide.LEFT]
+        right_risk_bounds = data['risk_bounds'][TrackSide.RIGHT]
     else:
         left_risk_bounds = None
         right_risk_bounds = None
 
     if get_first(data):
-        if not invert_scenario:
-            global_metrics_dict['who went first'].append(get_first(data))
-            global_metrics_dict['time_gap_at_merge'].append(get_time_gap(data))
-        else:
-            global_metrics_dict['who went first'].append(get_first(data).other)
-            global_metrics_dict['time_gap_at_merge'].append(-1 * get_time_gap(data))
+        global_metrics_dict['who went first'].append(get_first(data))
+        global_metrics_dict['time_gap_at_merge'].append(get_time_gap(data))
     else:
         global_metrics_dict['who went first'].append('Collision')
         global_metrics_dict['time_gap_at_merge'].append(None)
@@ -332,26 +334,35 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
     global_metrics_dict['min_ttc_after_merge'].append(get_min_ttc_after_merge(data))
     global_metrics_dict['end state'].append(end_state)
     global_metrics_dict['trial_number'].append(experiment_iteration)
+    global_metrics_dict['is_simulation'].append(is_simulation)
     global_metrics_dict['experiment_number'].append(experiment_iteration.split('-')[0])
 
     both_out_of_tunnel_mask = (np.array(data['travelled_distance'][TrackSide.LEFT]) > data['simulation_constants'].track_section_length) & \
                               (np.array(data['travelled_distance'][TrackSide.RIGHT]) > data['simulation_constants'].track_section_length)
     both_before_merge_mask = (np.array(data['travelled_distance'][TrackSide.LEFT]) < 2 * data['simulation_constants'].track_section_length) & \
                              (np.array(data['travelled_distance'][TrackSide.RIGHT]) < 2 * data['simulation_constants'].track_section_length)
+    out_of_tunnel_time = np.array(time)[both_out_of_tunnel_mask][0]
+    global_metrics_dict['out_of_tunnel_time'].append(out_of_tunnel_time)
+    out_of_tunnel_index = np.where(both_out_of_tunnel_mask)[0][0]
+
     participants_have_control_mask = copy.copy(both_out_of_tunnel_mask)
     participants_have_control_mask[np.where(participants_have_control_mask)[0][0]] = False
 
-    out_of_tunnel_time = np.array(time)[both_out_of_tunnel_mask][0]
-    global_metrics_dict['out_of_tunnel_time'].append(out_of_tunnel_time)
+    average_travelled_distance = (np.array(data['travelled_distance'][TrackSide.LEFT]) + np.array(data['travelled_distance'][TrackSide.RIGHT])) / 2.
+    try:
+        merge_point_index = np.where(average_travelled_distance >= 2 * data['simulation_constants'].track_section_length)[0][0]
+        global_metrics_dict['merge_time'].append(time[merge_point_index])
+    except IndexError:
+        global_metrics_dict['merge_time'].append(None)
 
-    time_of_conflict_resolved = calculate_conflict_resolved_time(data)
+    time_of_conflict_resolved, conflict_resolved_index = calculate_conflict_resolved_time(data)
     global_metrics_dict['conflict_resolved_time'].append(time_of_conflict_resolved)
     try:
         global_metrics_dict['nett crt'].append(time_of_conflict_resolved - out_of_tunnel_time)
     except TypeError:
         global_metrics_dict['nett crt'].append(None)
 
-    realistic_velocity_bounds = (7, 13)
+    realistic_velocity_bounds = (3, 14.5)
     velocities_within_bounds = True
     for side in TrackSide:
         velocities_within_bounds &= min(data['velocities'][side]) >= realistic_velocity_bounds[0]
@@ -372,26 +383,22 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
     ttc_trace = get_inv_ttc_trace(data)
     condition_list = [condition_name] * len(time)
     trial_number_list = [experiment_iteration] * len(time)
+    is_simulation_list = [is_simulation] * len(time)
     experiment_number_list = [experiment_iteration.split('-')[0]] * len(time)
 
     global_traces_dict['inverse ttc [1/s]'] += ttc_trace
 
-    if not invert_scenario:
-        headway = np.array(data['travelled_distance'][TrackSide.LEFT]) - np.array(data['travelled_distance'][TrackSide.RIGHT])
-        global_traces_dict['y position of right vehicle [m]'] += list(np.array(data['positions'][TrackSide.RIGHT])[:, 1])
-        global_traces_dict['relative velocity [m/s]'] += list(np.array(data['velocities'][TrackSide.LEFT]) - np.array(data['velocities'][TrackSide.RIGHT]))
-    else:
-        headway = np.array(data['travelled_distance'][TrackSide.RIGHT]) - np.array(data['travelled_distance'][TrackSide.LEFT])
-        global_traces_dict['y position of right vehicle [m]'] += list(np.array(data['positions'][TrackSide.LEFT])[:, 1])
-        global_traces_dict['relative velocity [m/s]'] += list(np.array(data['velocities'][TrackSide.RIGHT]) - np.array(data['velocities'][TrackSide.LEFT]))
+    headway = np.array(data['travelled_distance'][TrackSide.LEFT]) - np.array(data['travelled_distance'][TrackSide.RIGHT])
 
+    global_traces_dict['y position of right vehicle [m]'] += list(np.array(data['positions'][TrackSide.RIGHT])[:, 1])
+    global_traces_dict['relative velocity [m/s]'] += list(np.array(data['velocities'][TrackSide.LEFT]) - np.array(data['velocities'][TrackSide.RIGHT]))
     global_traces_dict['headway [m]'] += list(headway)
-
     global_traces_dict['time [s]'] += time
     average_travelled_distance = (np.array(data['travelled_distance'][TrackSide.LEFT]) + np.array(data['travelled_distance'][TrackSide.RIGHT])) / 2.
     global_traces_dict['average travelled distance [m]'] += list(average_travelled_distance)
     global_traces_dict['condition'] += condition_list
     global_traces_dict['trial_number'] += trial_number_list
+    global_traces_dict['is_simulation'] += is_simulation_list
     global_traces_dict['experiment_number'] += experiment_number_list
     global_traces_dict['end state'] += [end_state] * len(time)
     global_traces_dict['left risk bounds'] += [left_risk_bounds] * len(time)
@@ -406,12 +413,6 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
 
     global_traces_dict['difficulty right'] += list(level_of_conflict[TrackSide.RIGHT])
     global_traces_dict['difficulty left'] += list(level_of_conflict[TrackSide.LEFT])
-
-    try:
-        merge_point_index = np.where(average_travelled_distance >= 2 * data['simulation_constants'].track_section_length)[0][0]
-        global_metrics_dict['merge_time'].append(time[merge_point_index])
-    except IndexError:
-        global_metrics_dict['merge_time'].append(None)
 
     if get_first(data):
         global_metrics_dict['std of difficulty'] += [np.std(np.array(level_of_conflict[get_first(data)])[both_before_merge_mask & both_out_of_tunnel_mask])]
@@ -432,29 +433,40 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
         individual_metrics_dict['positive acceleration integral'] += [positive_acceleration_integrals[side]]
         individual_metrics_dict['negative acceleration integral'] += [negative_acceleration_integrals[side]]
         individual_metrics_dict['max acceleration'] += [max(data['accelerations'][side])]
+        second_index = int(1000 / data['dt'])
+        individual_metrics_dict['v after one second'] += [np.array(data['velocities'][side])[participants_have_control_mask][second_index]]
+        individual_metrics_dict['velocity deviation after one second'] += [
+            np.array(data['velocities'][side])[participants_have_control_mask][second_index] - np.array(data['velocities'][side])[0]]
         individual_metrics_dict['moment of first response'] += [times_of_first_action[side]]
         individual_metrics_dict['number of replans'] += [np.abs(data['is_replanning'][side]).sum()]
-        individual_metrics_dict['max deviation from desired v'] += [
-            np.abs(np.array(data['velocities'][side]) - data['current_condition'].get_initial_velocity(side)).max()]
+        velocity_deviation = np.array(data['velocities'][side])[participants_have_control_mask] - data['current_condition'].get_initial_velocity(side)
+        individual_metrics_dict['max abs deviation from desired v'] += [abs(velocity_deviation).max()]
+        extreme_deviation = velocity_deviation.max() if velocity_deviation.max() > -velocity_deviation.min() else velocity_deviation.min()
+        individual_metrics_dict['extreme deviation from desired v'] += [extreme_deviation]
+        trace_length = len(velocity_deviation)
         individual_metrics_dict['condition'] += [condition_name]
-        individual_metrics_dict['initial nett acceleration'] += [np.array(data['net_accelerations'][side])[participants_have_control_mask][0]]
         individual_metrics_dict['trial_number'] += [experiment_iteration]
+        individual_metrics_dict['is_simulation'] += [is_simulation]
         individual_metrics_dict['experiment_number'] += [experiment_iteration.split('-')[0]]
         individual_metrics_dict['end state'].append(end_state)
-        if not invert_scenario:
-            individual_metrics_dict['side'] += [str(side)]
-        else:
-            individual_metrics_dict['side'] += [str(side.other)]
-
-        constant_v_travelled_distance = np.array(time) * data['velocities'][side][0] + data['travelled_distance'][side][0]
+        individual_metrics_dict['side'] += [str(side)]
+        constant_v_travelled_distance = np.array(time) * data['current_condition'].get_initial_velocity(side) + data['travelled_distance'][side][0]
 
         individual_traces_dict['velocity [m/s]'] += data['velocities'][side]
         individual_traces_dict['travelled distance [m]'] += data['travelled_distance'][side]
         individual_traces_dict['deviation from constant v [m]'] += list(data['travelled_distance'][side] - constant_v_travelled_distance)
         individual_traces_dict['input'] += data['raw_input'][side]
+        individual_traces_dict['perceived risk'] += data['perceived_risks'][side]
+        individual_traces_dict['acceleration [m/s^2]'] += data['net_accelerations'][side]
+
+        jerk = list(np.array(data['net_accelerations'][side])[~participants_have_control_mask] * 0.0) + list(
+            np.gradient(np.array(data['net_accelerations'][side])[participants_have_control_mask], data['dt']))
+
+        individual_traces_dict['jerk [m/s^3]'] += jerk
         individual_traces_dict['time [s]'] += time
         individual_traces_dict['condition'] += [condition_name] * len(data['velocities'][side])
         individual_traces_dict['trial_number'] += [experiment_iteration] * len(data['velocities'][side])
+        individual_traces_dict['is_simulation'] += [is_simulation] * len(data['velocities'][side])
         individual_traces_dict['experiment_number'] += [experiment_iteration.split('-')[0]] * len(data['velocities'][side])
         individual_traces_dict['end state'] += [end_state] * len(time)
 
@@ -469,23 +481,36 @@ def get_data_as_dicts(data, condition_name, experiment_iteration, invert_scenari
             individual_metrics_dict['other risk bounds'] += [left_risk_bounds]
             individual_traces_dict['other risk bounds'] += [left_risk_bounds] * len(time)
 
-        if not invert_scenario:
-            individual_traces_dict['side'] += [str(side)] * len(data['velocities'][side])
-        else:
-            individual_traces_dict['side'] += [str(side.other)] * len(data['velocities'][side])
+        individual_traces_dict['side'] += [str(side)] * len(data['velocities'][side])
     return global_metrics_dict, global_traces_dict, individual_metrics_dict, individual_traces_dict
 
 
-def load_data_from_file(index, file, override_trial_numbers, invert_scenarios, included_conditions, progress_queue=None):
+def load_data_from_file(index, file, override_trial_numbers, included_conditions, add_reconstructed_risk, progress_queue=None):
     with open(file, 'rb') as f:
         data = pickle.load(f)
+
+    if add_reconstructed_risk:
+        saturation_times = {TrackSide.LEFT: 1.6,
+                            TrackSide.RIGHT: 1.6}
+        time_horizons = {TrackSide.LEFT: 6.,
+                         TrackSide.RIGHT: 6.}
+        memory_lengths = {TrackSide.LEFT: 2,
+                          TrackSide.RIGHT: 2}
+        belief_frequencies = {TrackSide.LEFT: 4,
+                              TrackSide.RIGHT: 4}
+        expected_accelerations = {TrackSide.LEFT: 1.,
+                                  TrackSide.RIGHT: 1.}
+        append_experiment_data_with_belief(data, saturation_times, time_horizons, memory_lengths, belief_frequencies,
+                                           expected_accelerations, )
+
+    is_simulation = 'simulation' in file or override_trial_numbers
 
     if override_trial_numbers:
         experiment_number = 0
         experiment_iteration = index + 1
     else:
         try:
-            experiment_number = int(file.split('_')[3])
+            experiment_number = int(file.split('_')[-3])
             experiment_iteration = int(file.split('_')[-1].replace('.pkl', ''))
         except ValueError:
             experiment_number = 0
@@ -496,19 +521,14 @@ def load_data_from_file(index, file, override_trial_numbers, invert_scenarios, i
     except KeyError:
         condition_name = data['experimental_conditions'][experiment_iteration - 1].name
 
-    if invert_scenarios:
-        if 'L' in condition_name:
-            condition_name = condition_name.replace('L', 'R')
-        else:
-            condition_name = condition_name.replace('R', 'L')
-
     if condition_name in included_conditions:
-        global_metrics_dict, global_traces_dict, individual_metrics_dict, individual_traces_dict = get_data_as_dicts(data, condition_name,
-                                                                                                                     str(experiment_number) + '-' + str(
-                                                                                                                         experiment_iteration),
-                                                                                                                     invert_scenario=invert_scenarios)
+        iteration_name = str(experiment_number) + '-' + str(experiment_iteration)
+        if is_simulation:
+            iteration_name += '-sim'
+        global_metrics_dict, global_traces_dict, individual_metrics_dict, individual_traces_dict = \
+            get_data_as_dicts(data, condition_name, iteration_name, is_simulation)
     else:
-        global_metrics_dict, global_traces_dict, individual_metrics_dict, individual_traces_dict = {}, {}, {}, {}
+        global_metrics_dict, global_traces_dict, individual_metrics_dict, individual_traces_dict = {}, {}, {}, {}, {}
 
     if progress_queue is not None:
         progress_queue.put(1)

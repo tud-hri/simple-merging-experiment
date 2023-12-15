@@ -3,6 +3,9 @@ This project contains the code accompanying the paper **"Interactive Merging Beh
 
 Furthermore, this repository also contains the code accompanying the paper **"A model of dyadic merging interactions explains human drivers' behaviour from input signals to decisions"** by Olger Siebinga, Arkady Zgonnikov, and David Abbink. This part of the software contains the model implementation and the code to replicate the simulations. It can be found in the `cei_model` branch, it has it's own README file there. The data that was gathered for this publication can be found [here](https://doi.org/10.4121/d77ae5bd-cfd9-4c32-8f7a-c3565c2ccdd5). 
 
+## Simulating the model
+The core functionality of the code remains the same on this branch. To reproduce the plots and statistical analysis in the paper obtain all the data from the links above, extract in the data folder, and run the script `model_human_comparison.py` in the plotting module. To reproduce the fitting procedure, first create the grid and then run the fitting script in the `fitting` module. To simulate the model, use the `simulate_CEI.py` script.
+
 ## Quick Start
 The main project folder contains three run-scripts: `run_experiment.py`, `resume_experiment.py`, and `playback.py`. The `run-experiment.py` script will start the experiment as described in the paper, with one exception. By default, there are no human input devices connected to the vehicles. Code to connect Logitech Driving Force GT steering wheels is included in the script but commented out by default (lines 150 - 167). The experiment was conducted on a single computer with three screens. One for the experimenter to control the experiment, and one for each participant to show the vehicle they control. If the run script is started on a computer with three screens, the GUI dialogs are automatically placed on the three different screens. 
 
