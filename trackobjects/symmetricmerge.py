@@ -16,6 +16,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with simple-merging-experiment.  If not, see <https://www.gnu.org/licenses/>.
 """
+import casadi
+
 import numpy as np
 import shapely.affinity
 import shapely.geometry
@@ -207,6 +209,20 @@ class SymmetricMergingTrack(Track):
                 lb = self._lower_bound_constant_value
 
             return lb, ub
+
+    def get_collision_bounds_approximation_casadi(self, traveled_distance_vehicle_1):
+        x1 = traveled_distance_vehicle_1 - self._upper_bound_threshold
+        x2 = traveled_distance_vehicle_1 - self._lower_bound_threshold
+        sigmoid1 = (casadi.tanh(30 * x1)) / 2 + 1 / 2
+        sigmoid2 = (casadi.tanh(30 * x2)) / 2 + 1 / 2
+
+        ub = self._upper_bound_approximation_slope * traveled_distance_vehicle_1 + self._upper_bound_approximation_intersect
+        lb1 = self._lower_bound_constant_value
+        lb2 = self._lower_bound_approximation_slope * traveled_distance_vehicle_1 + self._lower_bound_approximation_intersect
+
+        ub_act = sigmoid1 * ub
+        lb_act = sigmoid1 * lb1 + sigmoid2 * (lb2 - lb1)
+        return lb_act, ub_act
 
     def get_collision_bounds(self, traveled_distance_vehicle_1, vehicle_width, vehicle_length):
         """

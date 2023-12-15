@@ -36,11 +36,12 @@ from tools import ProgressProcess
 from trackobjects.trackside import TrackSide
 
 
-def load_data(all_files, included_conditions, override_trial_numbers=False, show_tqdm=True):
+def load_data(all_files, included_conditions, override_trial_numbers=False, show_tqdm=True, add_reconstructed_risk=False):
     global_metrics_df_list = []
     global_traces_df_list = []
     individual_metrics_df_list = []
     individual_traces_df_list = []
+    conflict_metrics_df_list = []
 
     if show_tqdm:
         iterator = tqdm.tqdm(enumerate(all_files), total=len(all_files))
@@ -50,8 +51,8 @@ def load_data(all_files, included_conditions, override_trial_numbers=False, show
     for index, file in iterator:
         global_metrics, individual_metrics, global_traces, individual_traces = load_data_from_file(index, file,
                                                                                                                      override_trial_numbers,
-                                                                                                                     invert_scenarios=False,
-                                                                                                                     included_conditions=included_conditions)
+                                                                                                                     included_conditions,
+                                                                                                                     add_reconstructed_risk)
 
         global_metrics_df_list.append(global_metrics)
         global_traces_df_list.append(global_traces)
@@ -66,17 +67,18 @@ def load_data(all_files, included_conditions, override_trial_numbers=False, show
     return global_metrics, individual_metrics, global_traces, individual_traces
 
 
-def load_experiment_data(conditions_to_consider):
+def load_experiment_data(conditions_to_consider, include_simulations=False):
     data_folder = '..\\data\\experiment_data\\'
+    simulations_suffix = '_incl_sim' if include_simulations else ''
 
     try:
-        with open(data_folder + 'all_traces.pkl', 'rb') as f:
+        with open(data_folder + 'all_traces%s.pkl' % simulations_suffix, 'rb') as f:
             all_global_traces = pickle.load(f)
-        with open(data_folder + 'all_metrics.pkl', 'rb') as f:
+        with open(data_folder + 'all_metrics%s.pkl' % simulations_suffix, 'rb') as f:
             all_global_metrics = pickle.load(f)
-        with open(data_folder + 'all_individual_traces.pkl', 'rb') as f:
+        with open(data_folder + 'all_individual_traces%s.pkl' % simulations_suffix, 'rb') as f:
             all_individual_traces = pickle.load(f)
-        with open(data_folder + 'all_individual_metrics.pkl', 'rb') as f:
+        with open(data_folder + 'all_individual_metrics%s.pkl' % simulations_suffix, 'rb') as f:
             all_individual_metrics = pickle.load(f)
     except FileNotFoundError:
         all_global_metrics = []
@@ -85,9 +87,14 @@ def load_experiment_data(conditions_to_consider):
         all_individual_metrics = []
 
         for experiment_number in [4, 5, 6, 8, 9, 10, 11, 12, 13]:
-            all_experiment_iterations = glob.glob('..\\data\\experiment_data\\experiment_%d\\experiment_%d_iter_*.pkl' % (experiment_number, experiment_number))
+            all_experiment_iterations = glob.glob(
+                '..\\data\\experiment_data\\experiment_%d\\experiment_%d_iter_*.pkl' % (experiment_number, experiment_number))
+            if include_simulations:
+                all_experiment_iterations += glob.glob('..\\data\\simulated_data\\experiment_%d\\*.pkl' % experiment_number)
 
-            global_metrics, individual_metrics, global_traces, individual_traces = load_data(all_experiment_iterations, conditions_to_consider)
+            global_metrics, individual_metrics, global_traces, individual_traces = load_data(all_experiment_iterations,
+                                                                                                               conditions_to_consider,
+                                                                                                               add_reconstructed_risk=True)
             all_global_metrics.append(global_metrics)
             all_global_traces.append(global_traces)
             all_individual_traces.append(individual_traces)
@@ -98,39 +105,17 @@ def load_experiment_data(conditions_to_consider):
         all_individual_traces = pd.concat(all_individual_traces).reset_index()
         all_individual_metrics = pd.concat(all_individual_metrics).reset_index()
 
-        with open(data_folder + 'all_traces.pkl', 'wb') as f:
+        with open(data_folder + 'all_traces%s.pkl' % simulations_suffix, 'wb') as f:
             pickle.dump(all_global_traces, f)
-        with open(data_folder + 'all_metrics.pkl', 'wb') as f:
+        with open(data_folder + 'all_metrics%s.pkl' % simulations_suffix, 'wb') as f:
             pickle.dump(all_global_metrics, f)
-        with open(data_folder + 'all_individual_traces.pkl', 'wb') as f:
+        with open(data_folder + 'all_individual_traces%s.pkl' % simulations_suffix, 'wb') as f:
             pickle.dump(all_individual_traces, f)
-        with open(data_folder + 'all_individual_metrics.pkl', 'wb') as f:
+        with open(data_folder + 'all_individual_metrics%s.pkl' % simulations_suffix, 'wb') as f:
             pickle.dump(all_individual_metrics, f)
 
     return all_global_traces, all_global_metrics, all_individual_traces, all_individual_metrics
 
-
-def load_data_with_multi_processing(all_files, included_conditions, invert_scenarios=False, override_trial_numbers=False, workers=8):
-    if not all_files:
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-
-    manager = mp.Manager()
-    progress_process = ProgressProcess(len(all_files), manager)
-    progress_process.start()
-
-    arguments = zip([r for r in range(len(all_files))], all_files, [override_trial_numbers] * len(all_files), [invert_scenarios] * len(all_files),
-                    [included_conditions] * len(all_files), [progress_process.queue] * len(all_files))
-
-    with mp.Pool(workers) as p:
-        results = p.starmap(load_data_from_file, arguments)
-    global_metrics_list, individual_metrics_list, global_traces_list, individual_traces_list = list(zip(*results))
-
-    global_metrics = pd.concat(global_metrics_list, ignore_index=True).convert_dtypes()
-    individual_metrics = pd.concat(individual_metrics_list, ignore_index=True).convert_dtypes()
-    global_traces = pd.concat(global_traces_list, ignore_index=True).convert_dtypes()
-    individual_traces = pd.concat(individual_traces_list, ignore_index=True).convert_dtypes()
-
-    return global_metrics, individual_metrics, global_traces, individual_traces
 
 
 def plot_global_metrics(global_metric_data, palette, conditions_to_consider):

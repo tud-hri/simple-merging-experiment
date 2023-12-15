@@ -1,21 +1,3 @@
-"""
-Copyright 2022, Olger Siebinga (o.siebinga@tudelft.nl)
-
-This file is part of simple-merging-experiment.
-
-simple-merging-experiment is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-simple-merging-experiment is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with simple-merging-experiment.  If not, see <https://www.gnu.org/licenses/>.
-"""
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -41,6 +23,7 @@ def regression_on_merge_point_prediction(data, velocity_color_map, vehicle_color
     pymer4_model = pymer4.models.Lmer(data=model_data, formula="who_first_int ~ " + headway + " + " + rel_v + " + (1|experiment_number)",
                                       family='binomial')
     pymer4_model.fit(summary=False)
+    print(pymer4_model.summary())
     print(pymer4_model.coefs.to_string())
     print(pymer4_model.fixef.to_string())
 
@@ -238,7 +221,7 @@ def plot_logitic_mpl(data, headway, rel_v, regression_results: pymer4.models.Lme
     return fig
 
 
-def two_d_linear_regression_on_crt(data):
+def two_d_linear_regression_on_crt(data, sup_title=''):
     headway = 'projected_headway_crt'
     rel_v = 'relative_velocity_crt'
 
@@ -262,6 +245,7 @@ def two_d_linear_regression_on_crt(data):
     ax_1 = fig.add_subplot(1, 3, 1, projection='3d')
     ax_2 = fig.add_subplot(1, 3, 2, projection='3d')
     ax_3 = fig.add_subplot(1, 3, 3, projection='3d')
+    plt.suptitle(sup_title)
 
     for ax in [ax_1, ax_2, ax_3]:
         ax.plot_surface(X=grid[0], Y=grid[1], Z=predictions, edgecolor='k', color='k', lw=0.5, rstride=8, cstride=8,
@@ -313,7 +297,6 @@ def two_d_linear_regression_on_crt(data):
 
     new_conditions = np.array(
         [[0., 0.], [0., -.8], [2., -.8], [4., -.8], [4., 0.], [4., 0.8], [0., .8], [-2., .8], [-4., .8], [-4., 0.], [-4., -0.8]])
-    labels = ['0_0', '0_-8', '2_-8', '4_-8', '4_0', '4_8', '0_8', '-2_8', '-4_8', '-4_0', '-4_-8']
     plt.scatter(new_conditions[:, 0], new_conditions[:, 1], color='k', zorder=100., marker='s')
 
     fig.axes[0].set_aspect('equal')
@@ -331,11 +314,11 @@ def two_d_linear_regression_on_crt(data):
                      2: {-0.8: 2.75, 0.0: 3.0, 0.8: 3.25},
                      4: {-0.8: 3.75, 0.0: 4.0, 0.8: 4.25}}
 
-    x = np.array([-4., -2., 0., 2., 4.])
+    x = np.array([-2., 0., 2., 4.])
     y = np.array([-.8, 0., .8])
 
     grid = np.meshgrid(x, y)
-    as_2d_array = np.array(grid).reshape((2, 15))
+    as_2d_array = np.array(grid).reshape((2, 12))
     as_df = pd.DataFrame(as_2d_array.T, columns=[headway, rel_v])
     as_df[headway + ":" + rel_v] = as_df[headway] * as_df[rel_v]
     as_df['experiment_number'] = np.NaN
@@ -357,6 +340,7 @@ def two_d_linear_regression_on_crt(data):
     mean_merge_time_data = pd.DataFrame(mean_merge_time_data)
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    plt.suptitle(sup_title)
     palette = {0.0: 'tab:grey', 0.8: 'tab:olive', -0.8: 'tab:cyan'}
 
     sns.boxplot(data=data, x='projected_headway', y='nett crt', hue='relative_velocity', dodge=True,
@@ -456,11 +440,8 @@ def _get_relative_velocity(row):
     return float(elements[2]) / 10.
 
 
-def _get_normalized_crt(row, minimum_crts):
-    return row['nett crt'] - minimum_crts[row['condition']]
-
-
-def _load_train_data():
+if __name__ == '__main__':
+    include_sim = True
 
     conditions_to_consider = ['R_-4_-8', 'R_-4_0', 'R_-4_8', 'R_-2_8', 'R_0_8', 'N_0_0', 'L_0_-8', 'L_2_-8', 'L_4_-8', 'L_4_0', 'L_4_8']
     # setup simulation constants
@@ -471,7 +452,8 @@ def _load_train_data():
                                                track_section_length=50,
                                                max_time=30e3)
 
-    _, global_metrics, _, individual_metrics = load_experiment_data(conditions_to_consider)
+    global_traces, global_metrics, individual_traces, individual_metrics, conflict_metrics = load_experiment_data(conditions_to_consider, include_simulations=include_sim)
+
     global_metrics['who first str'] = global_metrics['who went first'].astype(str)
     global_metrics['nett_crt'] = global_metrics['nett crt'].astype(float)
 
@@ -484,7 +466,12 @@ def _load_train_data():
     who_went_first_sign_data = train_data['who_first_int'] * 2 - 1
 
     train_data.loc[:, 'relative_velocity_crt'] = train_data.loc[:, 'relative_velocity'] * who_went_first_sign_data
-    train_data.loc[:, 'projected_headway_crt'] = train_data.loc[:, 'projected_headway'] * who_went_first_sign_data
+    train_data.loc[:, 'velocity_advantage_crt'] = train_data.loc[:, 'relative_velocity_crt'].clip(0, np.inf)
+    train_data.loc[:, 'velocity_disadvantage_crt'] = train_data.loc[:, 'relative_velocity_crt'].clip(-np.inf, 0)
+    train_data.loc[:, 'projected_headway_crt'] = (train_data.loc[:, 'projected_headway'] * who_went_first_sign_data).astype(int)
+
+    train_data.loc[:, 'relative_velocity_squared'] = train_data.loc[:, 'relative_velocity_crt'] ** 2
+    train_data.loc[:, 'projected_headway_squared'] = train_data.loc[:, 'projected_headway_crt'] ** 2
 
     velocity_cdict = {'red': [[0.0, 23 / 255, 23 / 255],
                               [0.5, 127 / 255, 127 / 255],
@@ -509,22 +496,15 @@ def _load_train_data():
     velocity_color_map = mpl.colors.LinearSegmentedColormap('velocity_cmap', segmentdata=velocity_cdict)
     vehicle_color_map = mpl.colors.LinearSegmentedColormap('vehicle_cmap', segmentdata=vehicle_cdict)
 
-    return global_metrics, train_data, velocity_color_map, vehicle_color_map
+    print('Human Data:')
+    data = train_data.loc[~train_data['is_simulation'], :]
+    two_d_linear_regression_on_crt(data, sup_title='Human')
+    fitted_model = regression_on_merge_point_prediction(data, velocity_color_map, vehicle_color_map, use_matplotlib=True)
 
-
-if __name__ == '__main__':
-
-    global_metrics, train_data, velocity_color_map, vehicle_color_map = _load_train_data()
-
-    two_d_linear_regression_on_crt(train_data)
-    fitted_model = regression_on_merge_point_prediction(train_data, velocity_color_map, vehicle_color_map, use_matplotlib=True)
-
-    collisions_per_condition = {}
-
-    for condition in train_data['condition'].unique():
-        collisions_per_condition[condition] = global_metrics.loc[
-            (global_metrics['condition'] == condition) & (global_metrics['end state'] == 'Collided'), 'end state'].count()
-
-    print(collisions_per_condition)
+    if include_sim:
+        print('Model Data:')
+        data = train_data.loc[train_data['is_simulation'], :]
+        two_d_linear_regression_on_crt(data, sup_title='Model')
+        fitted_model = regression_on_merge_point_prediction(data, velocity_color_map, vehicle_color_map, use_matplotlib=True)
 
     plt.show()
