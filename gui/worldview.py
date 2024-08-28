@@ -308,11 +308,11 @@ class WorldView(QtWidgets.QGraphicsView):
 
             # create rectangle with 20% margin around the edges for smooth panning
             if self.is_mirrored:
-                corner = self.mapToScene(QtCore.QPoint(1.4 * self.width(), -0.2 * self.height()))
+                corner = self.mapToScene(QtCore.QPoint(int(1.4 * self.width()), int(-0.2 * self.height())))
             else:
-                corner = self.mapToScene(QtCore.QPoint(-0.2 * self.width(), -0.2 * self.height()))
+                corner = self.mapToScene(QtCore.QPoint(int(-0.2 * self.width()), int(-0.2 * self.height())))
 
-            painter.drawRect(corner.x(), corner.y(), 1.4 * self.width(), 1.4 * self.height())
+            painter.drawRect(int(corner.x()), int(corner.y()), int(1.4 * self.width()), int(1.4 * self.height()))
 
             painter.setOpacity(1.0)
             font = QtGui.QFont()

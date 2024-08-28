@@ -46,7 +46,7 @@ class SimMaster(AbstractSimMaster):
         self.count_down_timer.timeout.connect(self.count_down)
 
         self.reset_timer = QtCore.QTimer()
-        self.reset_timer.setInterval(reset_delay * 1000)
+        self.reset_timer.setInterval(int(reset_delay * 1000))
         self.reset_timer.setSingleShot(True)
         self.reset_timer.timeout.connect(self.reset)
 

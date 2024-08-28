@@ -33,7 +33,7 @@ simulation_constants: SimulationConstants
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
 
-    file_name = os.path.join('experiments', 'experiment_1', 'experiment_1_training_1.pkl')
+    file_name = os.path.join('experiment_data', 'experiment_4', 'experiment_4_training_1.pkl')
     with open(os.path.join('data', file_name), 'rb') as f:
         playback_data = pickle.load(f)
 
