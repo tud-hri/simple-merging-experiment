@@ -6,7 +6,7 @@ permalink: /about/
 
 This website contains the online supplementary materials accompanying the papers: "Human Merging Behaviour in a Coupled Driving Simulator; How do we resolve conflicts?" and "A model of dyadic merging interactions explains human drivers’ behavior from control inputs to decisions". It includes interactive versions of plots in the papers, plus extra plots and videos.
 
-<h2>Human Merging Behaviour in a Coupled Driving Simulator; How do we resolve conflicts?</h2>
+<h3>Human Merging Behaviour in a Coupled Driving Simulator; How do we resolve conflicts?</h3>
 
 You can find the source code to reproduce the experiments and the plots on GitHub:
 
@@ -20,7 +20,7 @@ You can find the data from the paper on the 4TU Data repository:
 
 [DOI: 10.4121/19550377.v1](https://doi.org/10.4121/19550377.v1)
 
-<h2>A model of dyadic merging interactions explains human drivers’ behavior from control inputs to decisions</h2>
+<h3>A model of dyadic merging interactions explains human drivers’ behavior from control inputs to decisions</h3>
 
 You can find the source code to reproduce the simulations and the plots on GitHub:
 
