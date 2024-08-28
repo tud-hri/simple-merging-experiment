@@ -14,7 +14,7 @@ You can find the source code to reproduce the experiments and the plots at GitHu
 
 You can find the paper at the following DOI:
 
-[DOI to be determined](https://doi.org/)
+[DOI: 10.1109/OJITS.2024.3349635](https://doi.org/10.1109/OJITS.2024.3349635)
 
 You can find the data from the paper on the 4TU Data repository:
 
