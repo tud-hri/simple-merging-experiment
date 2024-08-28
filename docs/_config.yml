@@ -19,11 +19,9 @@
 # in the templates via {{ site.myvariable }}.
 
 title: |
-  Human Merging Behaviour in a Coupled Driving Simulator: 
-  How do we resolve conflicts?
+  Simple Merging Experiment
 description: >- 
-  The online supplementary materials accompanying the paper  
-  Human Merging Behaviour in a Coupled Driving Simulator: How do we resolve conflicts
+  The online supplementary materials accompanying the papers "Human Merging Behaviour in a Coupled Driving Simulator: How do we resolve conflicts" and "A model of dyadic merging interactions explains human drivers' behavior from control inputs to decisions"
 domain: tud-hri.github.io       # if you want to force HTTPS, specify the domain without the http at the start, e.g. example.com
 url: https://tud-hri.github.io  # the base hostname and protocol for your site, e.g. http://example.com
 
