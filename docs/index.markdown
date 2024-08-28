@@ -9,7 +9,7 @@ layout: page
 <h1> Welcome </h1>
 This website contains the supplementary material for two papers, click the links below to go to their respective pages. To find the original papers, data and software, click the "About" button on the right.
 
-- (Human Merging Behaviour in a Coupled Driving Simulator: How do we resolve conflicts?)[https://tud-hri.github.io/simple-merging-experiment/experiment]
-- (A model of dyadic merging interactions explains human drivers' behavior from control inputs to decisions)[https://tud-hri.github.io/simple-merging-experiment/model]
+- <a href="https://tud-hri.github.io/simple-merging-experiment/experiment">Human Merging Behaviour in a Coupled Driving Simulator: How do we resolve conflicts?</a>
+- <a href="https://tud-hri.github.io/simple-merging-experiment/model">A model of dyadic merging interactions explains human drivers' behavior from control inputs to decisions</a>
 
 Both papers are by Olger Siebinga, Arkady Zgonnikov, and David A. Abbink. 
