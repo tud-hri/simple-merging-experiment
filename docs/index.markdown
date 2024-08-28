@@ -6,7 +6,7 @@ layout: page
 ---
 
 
-<h1> Welcome </h1>
+<h1>Welcome</h1>
 This website contains the supplementary material for two papers, click the links below to go to their respective pages. To find the original papers, data and software, click the "About" button on the right.
 
 - <a href="https://tud-hri.github.io/simple-merging-experiment/experiment">Human Merging Behaviour in a Coupled Driving Simulator: How do we resolve conflicts?</a>

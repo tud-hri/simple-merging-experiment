@@ -5,8 +5,8 @@
 layout: page
 ---
 
-
-<h1> Welcome </h1>
+<h1>Human Merging Behaviour in a Coupled Driving Simulator: How do we resolve conflicts?</h1>
+<h3>Welcome</h3>
 This web page contains the supplementary material for the paper <a href="https://doi.org/10.1109/OJITS.2024.3349635" target="_blank">Human Merging Behaviour in a Coupled Driving Simulator: How do we resolve conflicts?</a> by Olger Siebinga, Arkady Zgonnikov, and David A. Abbink. You can find the source code to reproduce the experiments and the plots on <a href="https://github.com/tud-hri/simple-merging-experiment" target="_blank">Github</a>. You can find the data from the paper on the <a href="https://doi.org/10.4121/19550377.v1" target="_blank">4TU Data repository</a>.
 
 In all the plots below, you can click the legend to toggle elements in the plot. Other navigation tools (like zoom and reset view) can be found in the top right corner of every frame.
