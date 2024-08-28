@@ -9,12 +9,12 @@ Below are two videos that show typical merging interaction of the model and huma
 
 <h4>Human participants</h4>
 
-<video width="1920" height="1016">
+<video width="1920" height="1016" controls loop="" muted="" autoplay="">
  <source src="videos/Human_pair_1_condition_0_0.avi">
 </video>
 
 <h4>Model</h4>
 
-<video width="1920" height="1016">
+<video width="1920" height="1016" controls loop="" muted="" autoplay="">
  <source src="videos/Model_pair_1_condition_0_0.avi">
 </video>
