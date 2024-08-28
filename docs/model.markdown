@@ -10,13 +10,13 @@ Below are two videos that show typical merging interaction of the model and huma
 <h4>Human participants</h4>
 
 <video width="960" height="508" controls loop="" muted="" autoplay="">
- <source src="https://github.com/tud-hri/simple-merging-experiment/raw/master/docs/videos/Human_pair_1_condition_0_0.avi">
+ <source src="https://github.com/tud-hri/simple-merging-experiment/raw/master/docs/videos/Human_pair_1_condition_0_0.mp4">
 </video>
 
 <h4>Model</h4>
 
 <video width="960" height="508" controls loop="" muted="" autoplay="">
- <source src="https://github.com/tud-hri/simple-merging-experiment/raw/master/docs/videos/Model_pair_1_condition_0_0.avi">
+ <source src="https://github.com/tud-hri/simple-merging-experiment/raw/master/docs/videos/Model_pair_1_condition_0_0.mp4">
 </video>
 
 <h3>Collisions</h3>
@@ -25,11 +25,11 @@ Some text about collisions...
 <h4>Human participants</h4>
 
 <video width="960" height="508" controls loop="" muted="" autoplay="">
- <source src="https://github.com/tud-hri/simple-merging-experiment/raw/master/docs/videos/Human_pair_1_condition_-4_-8_collision.avi">
+ <source src="https://github.com/tud-hri/simple-merging-experiment/raw/master/docs/videos/Human_pair_1_condition_-4_-8_collision.mp4">
 </video>
 
 <h4>Model</h4>
 
 <video width="960" height="508" controls loop="" muted="" autoplay="">
- <source src="https://github.com/tud-hri/simple-merging-experiment/raw/master/docs/videos/Model_pair_1_condition_-4_-8_collision.avi">
+ <source src="https://github.com/tud-hri/simple-merging-experiment/raw/master/docs/videos/Model_pair_1_condition_-4_-8_collision.mp4">
 </video>
