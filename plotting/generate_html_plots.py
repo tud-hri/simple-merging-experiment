@@ -68,7 +68,7 @@ def rename_to_paper_conventions(global_traces, global_metrics, individual_traces
         df.replace(condition_names, inplace=True)
 
         df['experiment_number'] = df['experiment_number'].apply(lambda v: experiment_numbers[v])
-        df['trial_number'] = df['trial_number'].apply(lambda v: experiment_numbers[v.split('-')[0]] + '-' + v.split('-')[1])
+        df['trial_number'] = df['trial_number'].apply(lambda v: experiment_numbers[v.split('-')[0]] + '-' + '-'.join(v.split('-')[1:]))
 
 
 def get_metrics_excluding_collisions(metrics_data):
