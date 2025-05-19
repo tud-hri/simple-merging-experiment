@@ -20,7 +20,7 @@ from .conditiondefinition import ConditionDefinition
 from .conditionlist import ConditionList
 
 
-def get_experiment_conditions(simulation_constants):
+def get_experiment_conditions(simulation_constants, occurrences=10):
     N_0_0 = ConditionDefinition.from_merging_point_difference(left_velocity=10.,
                                                               right_velocity=10.,
                                                               left_headway=0.,
@@ -80,6 +80,6 @@ def get_experiment_conditions(simulation_constants):
                                                                 name='R_-4_-8')
 
     condition_list = ConditionList()
-    condition_list.initialize_from_conditions([N_0_0, L_0_m8, L_2_m8, L_4_m8, L_4_0, L_4_8, R_0_8, R_m2_8, R_m4_8, R_m4_0, R_m4_m8], occurrences=10)
+    condition_list.initialize_from_conditions([N_0_0, L_0_m8, L_2_m8, L_4_m8, L_4_0, L_4_8, R_0_8, R_m2_8, R_m4_8, R_m4_0, R_m4_m8], occurrences=occurrences)
 
     return condition_list

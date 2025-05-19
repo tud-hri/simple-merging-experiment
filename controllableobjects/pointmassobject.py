@@ -54,6 +54,7 @@ class PointMassObject(ControllableObject):
         self.max_acceleration = 2.5
         self._discrete_acceleration_magnitude = self.max_acceleration * 0.8
         self.acceleration = 0.0
+        self.last_net_acceleration = 0.0
 
         self.cruise_control_velocity = cruise_control_velocity
         self._cruise_control_last_error = cruise_control_velocity - initial_velocity
@@ -87,7 +88,7 @@ class PointMassObject(ControllableObject):
 
         self.traveled_distance, _ = self.calculate_time_step_1d(dt, self.traveled_distance, self.velocity, self.acceleration, self.resistance_coefficient,
                                                                 self.constant_resistance)
-        self.position, self.velocity = self.calculate_time_step_2d(dt, self.position, self.velocity, self.heading, self.acceleration,
+        self.position, self.velocity, self.last_net_acceleration = self.calculate_time_step_2d(dt, self.position, self.velocity, self.heading, self.acceleration,
                                                                    self.resistance_coefficient, self.constant_resistance)
 
     @staticmethod
@@ -102,7 +103,7 @@ class PointMassObject(ControllableObject):
 
         new_position = position + (velocity * dt + (net_acceleration / 2) * dt ** 2) * direction_vector
 
-        return new_position, new_velocity
+        return new_position, new_velocity, net_acceleration
 
     @staticmethod
     def calculate_time_step_1d(dt, position, velocity, acceleration, resistance_coefficient, constant_resistance):

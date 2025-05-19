@@ -25,6 +25,7 @@ import pickle
 import numpy as np
 import scipy.io
 
+from agents import CEIAgentV2
 from simulation.simulationconstants import SimulationConstants
 from trackobjects.trackside import TrackSide
 
@@ -56,51 +57,87 @@ class AbstractSimMaster(abc.ABC):
 
         self._is_recording = False
 
-        if file_name:
-            # dicts for saving to file and a list that contains all attributes of the sim master object that will be saved
-            self.positions = {}
-            self.travelled_distance = {}
-            self.raw_input = {}
-            self.velocities = {}
-            self.accelerations = {}
-            self.net_accelerations = {}
+        # dicts for saving to file and a list that contains all attributes of the sim master object that will be saved
+        self.beliefs = {}
+        self.observed_velocities = {}
+        self.perceived_risks = {}
+        self.is_replanning = {}
+        self.position_plans = {}
+        self.action_plans = {}
+        self.positions = {}
+        self.travelled_distance = {}
+        self.raw_input = {}
+        self.velocities = {}
+        self.accelerations = {}
+        self.net_accelerations = {}
+        self.belief_time_stamps = {}
+        self.belief_point_contributing_to_risk = {}
+        self.risk_bounds = {}
 
-            self._attributes_to_save = ['dt', 'max_time', 'simulation_constants', 'vehicle_width', 'vehicle_length', 'agent_types', 'end_state',
-                                        'positions', 'travelled_distance', 'raw_input', 'velocities', 'accelerations', 'net_accelerations', 'current_condition']
+        self._attributes_to_save = ['dt', 'max_time', 'simulation_constants', 'vehicle_width', 'vehicle_length', 'agent_types', 'end_state',
+                                    'beliefs', 'observed_velocities', 'perceived_risks', 'is_replanning', 'position_plans', 'action_plans', 'positions',
+                                    'travelled_distance', 'raw_input', 'velocities', 'accelerations', 'net_accelerations', 'belief_time_stamps',
+                                    'belief_point_contributing_to_risk', 'risk_bounds', 'current_condition']
 
-            number_of_time_steps = int(simulation_constants.max_time / simulation_constants.dt) + 1
-            for side in TrackSide:
-                self.positions[side] = [None] * number_of_time_steps
-                self.travelled_distance[side] = [None] * number_of_time_steps
-                self.raw_input[side] = [None] * number_of_time_steps
-                self.velocities[side] = [None] * number_of_time_steps
-                self.accelerations[side] = [None] * number_of_time_steps
-                self.net_accelerations[side] = [None] * number_of_time_steps
+        number_of_time_steps = int(simulation_constants.max_time / simulation_constants.dt) + 1
+        for side in TrackSide:
+            self.beliefs[side] = [None] * number_of_time_steps
+            self.observed_velocities[side] = [None] * number_of_time_steps
+            self.position_plans[side] = [None] * number_of_time_steps
+            self.action_plans[side] = [None] * number_of_time_steps
+            self.perceived_risks[side] = [None] * number_of_time_steps
+            self.is_replanning[side] = [None] * number_of_time_steps
+            self.positions[side] = [None] * number_of_time_steps
+            self.travelled_distance[side] = [None] * number_of_time_steps
+            self.raw_input[side] = [None] * number_of_time_steps
+            self.velocities[side] = [None] * number_of_time_steps
+            self.accelerations[side] = [None] * number_of_time_steps
+            self.net_accelerations[side] = [None] * number_of_time_steps
+            self.belief_time_stamps[side] = [None] * number_of_time_steps
+            self.belief_point_contributing_to_risk[side] = [None] * number_of_time_steps
 
     def reset(self):
         self._t = 0.  # [ms]
         self.time_index = 0
         self.end_state = 'Not finished'
 
-        if self._file_name:
-            # dicts for saving to file and a list that contains all attributes of the sim master object that will be saved
-            self.positions = {}
-            self.travelled_distance = {}
-            self.raw_input = {}
-            self.velocities = {}
-            self.accelerations = {}
-            self.net_accelerations = {}
-            self._attributes_to_save = ['dt', 'max_time', 'simulation_constants', 'vehicle_width', 'vehicle_length', 'agent_types', 'end_state',
-                                        'positions', 'travelled_distance', 'raw_input', 'velocities', 'accelerations', 'net_accelerations', 'current_condition']
+        self.beliefs = {}
+        self.observed_velocities = {}
+        self.perceived_risks = {}
+        self.is_replanning = {}
+        self.position_plans = {}
+        self.action_plans = {}
+        self.positions = {}
+        self.travelled_distance = {}
+        self.raw_input = {}
+        self.velocities = {}
+        self.accelerations = {}
+        self.net_accelerations = {}
+        self.belief_time_stamps = {}
+        self.belief_point_contributing_to_risk = {}
+        self.risk_bounds = {}
 
-            number_of_time_steps = int(self.simulation_constants.max_time / self.simulation_constants.dt)
-            for side in TrackSide:
-                self.positions[side] = [None] * number_of_time_steps
-                self.travelled_distance[side] = [None] * number_of_time_steps
-                self.raw_input[side] = [None] * number_of_time_steps
-                self.velocities[side] = [None] * number_of_time_steps
-                self.accelerations[side] = [None] * number_of_time_steps
-                self.net_accelerations[side] = [None] * number_of_time_steps
+        self._attributes_to_save = ['dt', 'max_time', 'simulation_constants', 'vehicle_width', 'vehicle_length', 'agent_types', 'end_state',
+                                    'beliefs', 'observed_velocities', 'perceived_risks', 'is_replanning', 'position_plans', 'action_plans', 'positions',
+                                    'travelled_distance', 'raw_input', 'velocities', 'accelerations', 'net_accelerations', 'belief_time_stamps',
+                                    'belief_point_contributing_to_risk', 'risk_bounds', 'current_condition']
+
+        number_of_time_steps = int(self.simulation_constants.max_time / self.simulation_constants.dt)
+        for side in TrackSide:
+            self.beliefs[side] = [None] * number_of_time_steps
+            self.observed_velocities[side] = [None] * number_of_time_steps
+            self.position_plans[side] = [None] * number_of_time_steps
+            self.action_plans[side] = [None] * number_of_time_steps
+            self.perceived_risks[side] = [None] * number_of_time_steps
+            self.is_replanning[side] = [None] * number_of_time_steps
+            self.positions[side] = [None] * number_of_time_steps
+            self.travelled_distance[side] = [None] * number_of_time_steps
+            self.raw_input[side] = [None] * number_of_time_steps
+            self.velocities[side] = [None] * number_of_time_steps
+            self.accelerations[side] = [None] * number_of_time_steps
+            self.net_accelerations[side] = [None] * number_of_time_steps
+            self.belief_time_stamps[side] = [None] * number_of_time_steps
+            self.belief_point_contributing_to_risk[side] = [None] * number_of_time_steps
 
     @abc.abstractmethod
     def do_time_step(self, reverse=False):
@@ -116,10 +153,10 @@ class AbstractSimMaster(abc.ABC):
 
     def get_current_state(self, side: TrackSide):
         try:
-            return self._vehicles[side].traveled_distance, self._vehicles[side].velocity
+            return self._vehicles[side].traveled_distance, self._vehicles[side].velocity, self._vehicles[side].last_net_acceleration
         except KeyError:
             # no vehicle exists on that side
-            return None, None
+            return None, None, None
 
     def enable_recording(self, boolean):
         self._is_recording = boolean
@@ -129,17 +166,39 @@ class AbstractSimMaster(abc.ABC):
         return self._t
 
     def _store_current_status(self):
-        if self._file_name is not None:
-            for side in self._agents.keys():
-                self.positions[side][self.time_index] = self._vehicles[side].position
-                self.velocities[side][self.time_index] = self._vehicles[side].velocity
-                self.travelled_distance[side][self.time_index] = self._vehicles[side].traveled_distance
-                self.raw_input[side][self.time_index] = self._vehicles[side].acceleration / self._vehicles[side].max_acceleration
-                self.accelerations[side][self.time_index] = self._vehicles[side].acceleration
-                self.net_accelerations[side][self.time_index] = self._vehicles[side].acceleration - self._vehicles[side].resistance_coefficient * \
-                                                                self._vehicles[side].velocity ** 2 - self._vehicles[side].constant_resistance
+        for side in self._agents.keys():
+            if self.agent_types[side] == CEIAgentV2:
+                self.beliefs[side][self.time_index] = copy.deepcopy(self._agents[side].belief)
+                self.observed_velocities[side][self.time_index] = self._agents[side].observed_velocity
+                self.action_plans[side][self.time_index] = copy.deepcopy(self._agents[side].action_plan)
+                self.position_plans[side][self.time_index] = copy.deepcopy(self._agents[side].position_plan)
+                self.perceived_risks[side][self.time_index] = copy.deepcopy(self._agents[side].perceived_risk)
+                self.is_replanning[side][self.time_index] = copy.deepcopy(self._agents[side].did_plan_update_on_last_tick)
+                self.belief_time_stamps[side][self.time_index] = copy.deepcopy(self._agents[side].belief_time_stamps)
+                self.belief_point_contributing_to_risk[side][self.time_index] = copy.deepcopy(self._agents[side].belief_point_contributing_to_risk)
+
+            self.positions[side][self.time_index] = self._vehicles[side].position
+            self.velocities[side][self.time_index] = self._vehicles[side].velocity
+            self.travelled_distance[side][self.time_index] = self._vehicles[side].traveled_distance
+            self.raw_input[side][self.time_index] = self._vehicles[side].acceleration / self._vehicles[side].max_acceleration
+            self.accelerations[side][self.time_index] = self._vehicles[side].acceleration
+            self.net_accelerations[side][self.time_index] = self._vehicles[side].acceleration - self._vehicles[side].resistance_coefficient * \
+                                                            self._vehicles[side].velocity ** 2 - self._vehicles[side].constant_resistance
 
     def _save_to_file(self, file_name_extension=''):
+        save_dict = {}
+        for variable_name in self._attributes_to_save:
+            variable_to_save = self.__getattribute__(variable_name)
+            if isinstance(variable_to_save, dict):
+                for side in TrackSide:
+                    try:
+                        if isinstance(variable_to_save[side], list):
+                            variable_to_save[side] = [value for value in variable_to_save[side] if value is not None]
+                    except KeyError:
+                        pass
+
+            save_dict[variable_name] = variable_to_save
+
         if self._file_name is not None:
             if self._sub_folder:
                 folder = os.path.join('data', self._sub_folder)
@@ -152,23 +211,11 @@ class AbstractSimMaster(abc.ABC):
             csv_file_name = os.path.join(folder, self._file_name + file_name_extension + '.csv')
             mat_file_name = os.path.join(folder, self._file_name + file_name_extension + '.mat')
 
-            save_dict = {}
-            for variable_name in self._attributes_to_save:
-                variable_to_save = self.__getattribute__(variable_name)
-                if isinstance(variable_to_save, dict):
-                    for side in TrackSide:
-                        try:
-                            if isinstance(variable_to_save[side], list):
-                                variable_to_save[side] = [value for value in variable_to_save[side] if value is not None]
-                        except KeyError:
-                            pass
-
-                save_dict[variable_name] = variable_to_save
-
             self._save_pkl(save_dict, pkl_file_name)
             if self._save_to_mat_and_csv:
                 self._save_mat(save_dict, mat_file_name)
                 self._save_csv(save_dict, csv_file_name)
+        return save_dict
 
     def _save_pkl(self, save_dict, pkl_file_name):
         pkl_dict = copy.deepcopy(save_dict)
